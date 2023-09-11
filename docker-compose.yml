@@ -1,0 +1,61 @@
+version: "3.7"
+
+services:
+  mariadb:
+    container_name: "DirectusMySql_MariaDb"
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: "password" # Replace with your desired root password
+      MYSQL_DATABASE: "app_database" # Replace with your database name
+    volumes:
+      - ./mariadb-data:/var/lib/mysql
+      - ./home:/home
+    #      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+    ports:
+      - "3521:3306"
+
+  phpmyadmin:
+    container_name: "DirectusMySql_PhpMyAdmin"
+    build:
+      context: .
+      dockerfile: Dockerfile.phpmyadmin # Use the custom Dockerfile
+    environment:
+      PMA_ARBITRARY: 1
+      PMA_HOST: mariadb
+      PMA_USER: root
+      PMA_PASSWORD: "password" # Use the same root password as defined for MariaDB
+      PHP_INI_MEMORY_LIMIT: "1024M"
+      PHP_INI_POST_MAX_SIZE: "1024M"
+      PHP_INI_UPLOAD_MAX_FILESIZE: "1024M"
+    ports:
+      - "3522:80"
+    depends_on:
+      - mariadb
+
+  directus:
+    container_name: "DirectusMySql_Directus"
+    image: directus/directus:10.4.0
+    ports:
+      - 3523:8055
+    volumes:
+      - ./directus/uploads:/directus/uploads
+    environment:
+      KEY: "6FB3C7AE-E1DA-4143-95A4-28090AC27C3F" # Run `uuidgen`
+      SECRET: "314c227d91ea07f4a2b7a2056aa8a607ba48193ac5381ccf6c0428a2c413b02e" # Run `openssl rand -hex 32`
+
+      DB_CLIENT: "mysql" # Use MySQL as the database client
+      DB_HOST: "host.docker.internal" # Use host.docker.internal to connect to MySQL on the host
+      DB_PORT: "3521" # MySQL default port
+      DB_DATABASE: "app_database" # Change to your database name
+      DB_USER: "root" # Change to your MySQL username
+      DB_PASSWORD: "password" # Change to your MySQL password
+
+      CACHE_ENABLED: "false" # Disable caching since Redis is removed
+
+      ADMIN_EMAIL: "admin@admin.com"
+      ADMIN_PASSWORD: "password"
+    depends_on:
+      - mariadb
+
+volumes:
+  mariadb-data:
